@@ -13,6 +13,8 @@ lib/
 
 # Database files (generated — do not commit)
 *.db
+*.sqlite
+*.sqlite3
 data/output/
 data/processed/
 data/raw/

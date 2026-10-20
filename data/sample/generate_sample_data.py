@@ -27,6 +27,14 @@ import random
 import sys
 from datetime import datetime, timedelta
 
+# Ensure UTF-8 output encoding on Windows consoles
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 random.seed(42)
 
 # ── Reference data ──────────────────────────────────────────────────────────
@@ -61,9 +69,12 @@ CUSTOMERS = [
 ]
 
 
+FIXED_BASE_DATE = datetime(2026, 10, 21)
+
+
 def random_date(start_days_ago: int = 365, end_days_ago: int = 0) -> datetime:
-    start = datetime.now() - timedelta(days=start_days_ago)
-    end = datetime.now() - timedelta(days=end_days_ago)
+    start = FIXED_BASE_DATE - timedelta(days=start_days_ago)
+    end = FIXED_BASE_DATE - timedelta(days=end_days_ago)
     return start + (end - start) * random.random()
 
 
@@ -154,17 +165,17 @@ if __name__ == "__main__":
     save_csv(batch2, os.path.join(project_root, "data", "sample", "batch_002.csv"))
 
     print("\nData generation complete.")
-    print("  data/raw/sales_raw.csv        → full pipeline input")
-    print("  data/sample/batch_001.csv     → incremental demo batch 1")
-    print("  data/sample/batch_002.csv     → incremental demo batch 2 (overlapping)")
+    print("  data/raw/sales_raw.csv        -> full pipeline input")
+    print("  data/sample/batch_001.csv     -> incremental demo batch 1")
+    print("  data/sample/batch_002.csv     -> incremental demo batch 2 (overlapping)")
 
     # ── INJECTION LOG ──────────────────────────────────────────────────────
     print("\nInjected data quality issues:")
-    print("  • ~5% duplicate rows (random.sample duplication)")
-    print("  • ~5% missing unit_price values")
-    print("  • ~3% missing customer_id values")
-    print("  • ~6% missing or malformed email addresses")
-    print("  • ~5% dates in DD/MM/YYYY format (vs standard YYYY-MM-DD)")
-    print("  • ~3% negative quantity values")
-    print("  • ~4% blank or 'N/A' region values")
-    print("  • Mixed-case status values (e.g., 'COMPLETED', 'pending')")
+    print("  - ~5% duplicate rows (random.sample duplication)")
+    print("  - ~5% missing unit_price values")
+    print("  - ~3% missing customer_id values")
+    print("  - ~6% missing or malformed email addresses")
+    print("  - ~5% dates in DD/MM/YYYY format (vs standard YYYY-MM-DD)")
+    print("  - ~3% negative quantity values")
+    print("  - ~4% blank or 'N/A' region values")
+    print("  - Mixed-case status values (e.g., 'COMPLETED', 'pending')")
