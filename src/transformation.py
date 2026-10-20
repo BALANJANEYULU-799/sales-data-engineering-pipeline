@@ -97,15 +97,8 @@ class Transformer:
         df = df.copy()
         before = len(df)
 
-        # Try ISO format first, then day-first for mixed-format CSVs
-        df["order_date"] = pd.to_datetime(df["order_date"], dayfirst=False, errors="coerce")
-        # Re-attempt day-first for values that failed (still NaT)
-        mask_nat = df["order_date"].isna()
-        if mask_nat.any():
-            retry = pd.to_datetime(
-                df.loc[mask_nat, "order_date"], dayfirst=True, errors="coerce"
-            )
-            df.loc[mask_nat, "order_date"] = retry
+        # Parse mixed formats (YYYY-MM-DD, DD/MM/YYYY) without warnings; invalid -> NaT
+        df["order_date"] = pd.to_datetime(df["order_date"], format="mixed", errors="coerce")
 
         for col in ["quantity", "unit_price", "discount"]:
             if col in df.columns:
@@ -234,8 +227,8 @@ class Transformer:
         rejected = df[reject_mask].copy()
         rejected["rejection_reason"] = rejected.apply(
             lambda row: "; ".join(filter(None, [
-                f"quantity={row.get('quantity')} ≤ 0" if pd.notna(row.get("quantity")) and row.get("quantity", 1) <= 0 else "",
-                f"unit_price={row.get('unit_price')} ≤ 0" if pd.notna(row.get("unit_price")) and row.get("unit_price", 1) <= 0 else "",
+                f"quantity={row.get('quantity')} <= 0" if pd.notna(row.get("quantity")) and row.get("quantity", 1) <= 0 else "",
+                f"unit_price={row.get('unit_price')} <= 0" if pd.notna(row.get("unit_price")) and row.get("unit_price", 1) <= 0 else "",
             ])),
             axis=1,
         )

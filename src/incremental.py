@@ -80,17 +80,26 @@ class IncrementalLoader:
         if "order_id" not in clean_df.columns:
             raise ValueError("DataFrame must have an 'order_id' column for incremental loading.")
 
-        # Get already-processed order_ids
+        # Get already-processed order_ids from tracking table and target table
         with self.engine.connect() as conn:
+            existing_ids = set()
             try:
-                existing_ids = set(
-                    pd.read_sql(
-                        text(f"SELECT order_id FROM {self.TRACKING_TABLE}"),
-                        conn,
-                    )["order_id"].tolist()
-                )
+                track_ids = pd.read_sql(
+                    text(f"SELECT order_id FROM {self.TRACKING_TABLE}"),
+                    conn,
+                )["order_id"].tolist()
+                existing_ids.update(track_ids)
             except Exception:
-                existing_ids = set()
+                pass
+
+            try:
+                table_ids = pd.read_sql(
+                    text(f"SELECT order_id FROM {main_table}"),
+                    conn,
+                )["order_id"].tolist()
+                existing_ids.update(table_ids)
+            except Exception:
+                pass
 
         # Split batch into new vs already-loaded
         new_df = clean_df[~clean_df["order_id"].isin(existing_ids)].copy()

@@ -134,10 +134,11 @@ def run_pipeline(mode: str = "replace", batch_label: str = "full_load") -> dict:
         rows_skipped = 0
         print(f"      ✓  Full replace: {rows_loaded:,} rows loaded")
 
-    # Build summary tables
+    # Build summary and star-schema tables
     db_loader_for_summaries = DatabaseLoader(CONFIG["db_url"])
     db_loader_for_summaries.build_summaries(clean_df)
-    print("      ✓  Summary tables built")
+    db_loader_for_summaries.build_star_schema(clean_df)
+    print("      ✓  Summary & star schema tables built")
 
     # ── STAGE 6: REPORT ───────────────────────────────────────────────
     print("\n[6/6] PIPELINE REPORT")

@@ -45,7 +45,7 @@ WHERE status = 'Completed';
 
 -- ────────────────────────────────────────────────────────────
 -- 3. GROUP BY and HAVING
---    Concept: aggregate per group; filter groups with HAVING
+--    Concept: aggregate per group - filter groups with HAVING
 -- ────────────────────────────────────────────────────────────
 -- Revenue by product category (only categories with > 5 orders)
 SELECT

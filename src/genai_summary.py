@@ -1,12 +1,16 @@
 """
 src/genai_summary.py
 ====================
-GenAI-assisted sales summary module.
+GenAI-Ready Sales Summary & Prompt Generator.
 
 Extracts deterministic KPI aggregates from the SQLite database, formats them
-into a structured prompt context, and generates an executive insight summary
-report. Operates deterministically without requiring paid API keys or cloud credentials,
-while illustrating how GenAI-enabled data solutions integrate with ETL pipelines.
+into a structured prompt context suitable for LLM ingestion, and produces a
+deterministic executive briefing report. Operates without requiring paid API
+keys or cloud credentials.
+
+This component demonstrates how GenAI-enabled data pipelines prepare verified
+analytical facts and structured prompts for downstream AI agents or LLMs.
+It is a prompt/summary generator rather than a live LLM API integration.
 """
 
 import json

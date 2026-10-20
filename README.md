@@ -52,8 +52,8 @@ flowchart TD
 | **Validate** | 13 named data-quality checks with pass/fail status and JSON report |
 | **Load** | SQLite with replace or upsert mode; 5 summary tables; pipeline_runs metadata table |
 | **Incremental** | Batch tracking table; idempotent re-run; batch history report |
-| **GenAI Summary** | Deterministic executive briefing and LLM prompt generator from SQL KPIs |
-| **SQL Analytics** | 11 queries demonstrating SELECT/WHERE/GROUP BY/HAVING/JOIN/CASE/CTE/window functions |
+| **GenAI-Ready Summary** | Deterministic executive briefing & LLM prompt generator from SQL KPIs (zero API keys required) |
+| **SQL Analytics** | 12 standalone analytical queries in sql/analytics.sql and 11 runners in src/analytics.py |
 | **CLI** | Interactive menu: run, profile, validate, analytics, summary, genai, demo-incr |
 | **Testing** | 42 pytest tests across 8 classes covering all pipeline stages |
 | **CI** | GitHub Actions workflow runs tests on push/PR for Python 3.10–3.12 |
@@ -103,7 +103,7 @@ sales-data-engineering-pipeline/
 │   └── data_quality.sql         ← DQ validation queries
 ├── tests/
 │   ├── conftest.py
-│   └── test_pipeline.py         ← 41 pytest tests
+│   └── test_pipeline.py         ← 42 pytest tests (100% passing)
 ├── .github/
 │   └── workflows/
 │       └── tests.yml            ← CI workflow
@@ -190,32 +190,41 @@ sqlite3 data/sales_pipeline.db < sql/analytics.sql
 ```
 =================================================================
   SALES DATA ENGINEERING PIPELINE
-  Mode: REPLACE   Batch: full_load
+  Mode: REPLACE   Batch: audit_run
 =================================================================
 
 [1/6] EXTRACT
       ✓  Read 210 rows from data/raw/sales_raw.csv
 
 [2/6] PROFILE
-      ✓  Rows: 210  |  Duplicates: 10  |  Total nulls: 67
+      ✓  Profile saved → reports/data_profile.json
+         Rows: 210  |  Duplicates: 10  |  Total nulls: 67
 
 [3/6] TRANSFORM
-      ✓  Clean records : 182
-      ✓  Rejected/quarantined: 28
+      ✓  Clean records : 190
+      ✓  Rejected/quarantined: 20
 
 [4/6] VALIDATE
       ✓  Checks: 13/13 passed  [PASS]
+      ✓  DQ report saved → reports/data_quality_report.json
 
 [5/6] LOAD
-      ✓  Full replace: 182 rows loaded
-      ✓  Summary tables built
+      ✓  Full replace: 190 rows loaded
+      ✓  Summary & star schema tables built
 
-PIPELINE COMPLETE
+[6/6] PIPELINE REPORT
+
+=================================================================
+  PIPELINE COMPLETE
   Rows extracted : 210
-  Rows clean     : 182
-  Rows rejected  : 28
-  Total revenue  : $193,983.27
-  Elapsed        : 0.45s
+  Rows clean     : 190
+  Rows rejected  : 20
+  Rows loaded    : 190
+  DQ status      : PASS
+  Total revenue  : $204,491.38
+  Elapsed        : 0.41s
+  Reports        : reports/
+=================================================================
 ```
 
 ---
@@ -337,7 +346,7 @@ The reference project by Pravalika Kadakanchi is a solid ETL foundation. Here is
 | Incremental loading | Not present (replace only) | ✅ **Original: IncrementalLoader with idempotency** |
 | Pipeline metadata table | Not present | ✅ **Original: pipeline_runs table** |
 | Star schema demonstration | Not present | ✅ **Original: fact_sales, dim_product, dim_date, dim_region** |
-| GenAI Executive Summary | Not present | ✅ **Original: genai_summary.py without external API keys** |
+| GenAI-Ready Summary / Prompt Generator | Not present | ✅ **Original: genai_summary.py (deterministic prompt builder & briefing, zero API keys)** |
 | Interactive CLI | Not present | ✅ **Original: cli.py with 7 commands** |
 | Cleaning summary | Basic audit dict | ✅ **Extended: get_cleaning_summary() with quarantine count** |
 | Test suite | 23 tests | ✅ **Extended to 42 tests** (8 test classes) |

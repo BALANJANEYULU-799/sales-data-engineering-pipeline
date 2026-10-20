@@ -78,6 +78,51 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
 );
 """
 
+STAR_SCHEMA_DDL = """
+CREATE TABLE IF NOT EXISTS dim_product (
+    product_key  INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_name TEXT    NOT NULL UNIQUE,
+    category     TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS dim_date (
+    date_key     TEXT    PRIMARY KEY,
+    year         INTEGER NOT NULL,
+    month        INTEGER NOT NULL,
+    quarter      INTEGER NOT NULL,
+    month_name   TEXT    NOT NULL,
+    day_of_week  TEXT,
+    is_weekend   INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS dim_region (
+    region_key   INTEGER PRIMARY KEY AUTOINCREMENT,
+    region_name  TEXT    NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS fact_sales (
+    fact_id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id        INTEGER NOT NULL UNIQUE,
+    product_key     INTEGER REFERENCES dim_product(product_key),
+    date_key        TEXT    REFERENCES dim_date(date_key),
+    region_key      INTEGER REFERENCES dim_region(region_key),
+    customer_id     TEXT,
+    customer_name   TEXT,
+    quantity        INTEGER NOT NULL CHECK (quantity > 0),
+    unit_price      REAL    NOT NULL,
+    discount        REAL    NOT NULL DEFAULT 0.0,
+    gross_amount    REAL    NOT NULL,
+    discount_amount REAL    NOT NULL DEFAULT 0.0,
+    net_amount      REAL    NOT NULL,
+    status          TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_fact_date    ON fact_sales(date_key);
+CREATE INDEX IF NOT EXISTS idx_fact_product ON fact_sales(product_key);
+CREATE INDEX IF NOT EXISTS idx_fact_region  ON fact_sales(region_key);
+CREATE INDEX IF NOT EXISTS idx_fact_status  ON fact_sales(status);
+"""
+
 
 class DatabaseLoader:
     """Loads clean DataFrames into SQLite with configurable strategies."""
@@ -99,6 +144,9 @@ class DatabaseLoader:
             for stmt in PIPELINE_RUNS_DDL.split(";"):
                 if stmt.strip():
                     conn.execute(text(stmt))
+            for stmt in STAR_SCHEMA_DDL.split(";"):
+                if stmt.strip():
+                    conn.execute(text(stmt))
         logger.info("[DB] Schema initialised at %s", self.db_url)
 
     # ------------------------------------------------------------------ #
@@ -106,11 +154,30 @@ class DatabaseLoader:
     # ------------------------------------------------------------------ #
     def load_replace(self, df: pd.DataFrame, table: str = "orders_clean") -> int:
         """
-        Drop and recreate the table with clean data.
-        Use for a full reload.  Not idempotent.
+        Clear and reload the table with clean data while preserving table schema and primary key.
+        Synchronizes the loaded_order_ids tracking table so incremental mode stays in sync.
         """
         df_to_load = self._prepare(df)
-        df_to_load.to_sql(table, self.engine, if_exists="replace", index=False)
+        with self.engine.begin() as conn:
+            conn.execute(text(f"DELETE FROM {table}"))
+            try:
+                conn.execute(text("DELETE FROM loaded_order_ids"))
+            except Exception:
+                pass
+        df_to_load.to_sql(table, self.engine, if_exists="append", index=False)
+
+        # Sync tracking table for incremental mode
+        try:
+            loaded_at = datetime.now().isoformat()
+            tracking_df = pd.DataFrame({
+                "order_id": df_to_load["order_id"].tolist(),
+                "loaded_at": loaded_at,
+                "batch_label": "full_replace",
+            })
+            tracking_df.to_sql("loaded_order_ids", self.engine, if_exists="append", index=False)
+        except Exception as e:
+            logger.debug("Tracking table sync skipped: %s", e)
+
         logger.info("[DB] REPLACE | table=%s | %d rows loaded", table, len(df_to_load))
         return len(df_to_load)
 
@@ -239,6 +306,105 @@ class DatabaseLoader:
 
         logger.info("[DB] Summary tables built: %s", list(summaries.keys()))
         return summaries
+
+    # ------------------------------------------------------------------ #
+    # Star schema dimension & fact loader
+    # ------------------------------------------------------------------ #
+    def build_star_schema(self, df: pd.DataFrame) -> dict:
+        """
+        Populate dim_product, dim_region, dim_date, and fact_sales tables
+        from the clean orders DataFrame to provide a dimensional model.
+        """
+        df_clean = df.copy()
+        if "order_date" in df_clean.columns and not pd.api.types.is_string_dtype(df_clean["order_date"]):
+            dates_dt = pd.to_datetime(df_clean["order_date"], errors="coerce")
+            df_clean["date_key"] = dates_dt.dt.strftime("%Y-%m-%d")
+        else:
+            df_clean["date_key"] = df_clean["order_date"].astype(str)
+            dates_dt = pd.to_datetime(df_clean["date_key"], errors="coerce")
+
+        with self.engine.begin() as conn:
+            conn.execute(text("DELETE FROM fact_sales"))
+            conn.execute(text("DELETE FROM dim_product"))
+            conn.execute(text("DELETE FROM dim_region"))
+            conn.execute(text("DELETE FROM dim_date"))
+
+        # 1. dim_product
+        prods = (
+            df_clean[["product", "category"]]
+            .drop_duplicates()
+            .rename(columns={"product": "product_name"})
+        )
+        prods.to_sql("dim_product", self.engine, if_exists="append", index=False)
+
+        # 2. dim_region
+        regions = (
+            df_clean[["region"]]
+            .drop_duplicates()
+            .rename(columns={"region": "region_name"})
+        )
+        regions.to_sql("dim_region", self.engine, if_exists="append", index=False)
+
+        # 3. dim_date
+        date_df = (
+            pd.DataFrame({
+                "date_key": df_clean["date_key"],
+                "year": dates_dt.dt.year.fillna(0).astype(int),
+                "month": dates_dt.dt.month.fillna(0).astype(int),
+                "quarter": dates_dt.dt.quarter.fillna(0).astype(int),
+                "month_name": dates_dt.dt.strftime("%B").fillna("Unknown"),
+                "day_of_week": dates_dt.dt.strftime("%A").fillna("Unknown"),
+                "is_weekend": dates_dt.dt.dayofweek.isin([5, 6]).astype(int),
+            })
+            .drop_duplicates(subset=["date_key"])
+            .dropna(subset=["date_key"])
+        )
+        date_df.to_sql("dim_date", self.engine, if_exists="append", index=False)
+
+        # 4. Map dimension keys to build fact_sales
+        with self.engine.connect() as conn:
+            dim_prod_map = pd.read_sql(
+                text("SELECT product_key, product_name FROM dim_product"), conn
+            )
+            dim_reg_map = pd.read_sql(
+                text("SELECT region_key, region_name FROM dim_region"), conn
+            )
+
+        fact = df_clean.merge(
+            dim_prod_map, left_on="product", right_on="product_name", how="left"
+        )
+        fact = fact.merge(
+            dim_reg_map, left_on="region", right_on="region_name", how="left"
+        )
+
+        fact_cols = [
+            "order_id",
+            "product_key",
+            "date_key",
+            "region_key",
+            "customer_id",
+            "customer_name",
+            "quantity",
+            "unit_price",
+            "discount",
+            "gross_amount",
+            "discount_amount",
+            "net_amount",
+            "status",
+        ]
+        fact_to_load = fact[fact_cols].drop_duplicates(subset=["order_id"])
+        fact_to_load.to_sql("fact_sales", self.engine, if_exists="append", index=False)
+
+        logger.info(
+            "[DB] Star schema populated: fact_sales (%d rows), dim_product (%d rows), dim_region (%d rows), dim_date (%d rows)",
+            len(fact_to_load), len(prods), len(regions), len(date_df),
+        )
+        return {
+            "fact_sales": len(fact_to_load),
+            "dim_product": len(prods),
+            "dim_region": len(regions),
+            "dim_date": len(date_df),
+        }
 
     # ------------------------------------------------------------------ #
     # Verify
