@@ -1,0 +1,101 @@
+order_id,customer_id,customer_name,email,region,product,category,quantity,unit_price,discount,status,order_date
+10024,CUST0043,Eve Wilson,user43@yahoo.com,North,Wireless Headphones,Electronics,5,89.99,0.1,Refunded,2026-02-10
+10089,CUST0049,Eve Wilson,user49@yahoo.com,Central,T-Shirt Pack,Clothing,1,29.99,0,Cancelled,2026-05-27
+10020,CUST0025,Jack Jones,user25@yahoo.com,Central,Laptop Pro 15,Electronics,8,1299.99,0,Refunded,2026-01-01
+10017,CUST0008,Iris Davis,user8@outlook.com,South,Wireless Headphones,Electronics,3,89.99,0.1,Cancelled,2025-11-02
+10002,CUST0016,Iris Smith,user16@yahoo.com,West,Organic Coffee,Food & Beverage,2,18.99,0,,2026-07-14
+10156,CUST0043,Eve Wilson,user43@yahoo.com,North,Wireless Headphones,Electronics,3,,0,Pending,2026-04-13
+10052,CUST0046,Grace Jones,user46@yahoo.com,West,Yoga Mat,Sports,8,34.99,0,Cancelled,2026-06-28
+10181,CUST0041,Bob Davis,user41@outlook.com,West,Laptop Pro 15,Electronics,3,1299.99,0,Refunded,2026-04-21
+10138,CUST0030,,user30@gmail.com,North,Running Shoes,Sports,4,119.99,0.1,Completed,2026-02-26
+10067,CUST0041,Bob Davis,user41@outlook.com,West,Smart Watch,Electronics,2,249.99,0.05,Cancelled,2025-12-20
+10087,CUST0015,Eve Smith,user15@gmail.com,West,T-Shirt Pack,Clothing,6,29.99,0.2,Refunded,2026-04-04
+10188,CUST0021,David Smith,user21@gmail.com,West,T-Shirt Pack,Clothing,1,29.99,0,,2026-03-20
+10198,CUST0023,Carol Brown,user23@outlook.com,East,Yoga Mat,Sports,6,34.99,0.05,COMPLETED,2026-08-03
+10102,CUST0039,Alice Smith,user39@gmail.com,South,Garden Hose,Home & Garden,7,44.99,0.05,,2026-05-20
+10094,CUST0019,David Smith,user19@yahoo.com,North,Protein Powder,Food & Beverage,10,,0.05,Cancelled,01/05/2026
+10007,CUST0007,Alice Wilson,user7@yahoo.com,South,Running Shoes,Sports,4,119.99,0,Pending,2026-05-04
+10065,CUST0042,Jack Davis,user42@gmail.com,Central,USB-C Hub,Electronics,2,49.99,0.05,Cancelled,2026-08-02
+10063,CUST0016,Iris Smith,user16@yahoo.com,West,Organic Coffee,Food & Beverage,7,,0,Refunded,2026-08-29
+10122,CUST0039,Alice Smith,user39@gmail.com,South,USB-C Hub,Electronics,9,49.99,0,Completed,2026-02-15
+10104,CUST0040,Carol Davis,user40@yahoo.com,Central,USB-C Hub,Electronics,6,49.99,0,Refunded,2026-09-20
+10124,CUST0010,Alice Jones,user10@yahoo.com,West,Organic Coffee,Food & Beverage,8,18.99,0,Pending,2025-12-05
+10197,CUST0030,Grace Brown,user30@gmail.com,North,Protein Powder,Food & Beverage,10,54.99,0.15,Cancelled,2026-04-21
+10001,CUST0049,Eve Wilson,user49@yahoo.com,Central,USB-C Hub,Electronics,9,49.99,0.2,Completed,2026-09-22
+10019,CUST0012,David Brown,user12@gmail.com,North,T-Shirt Pack,Clothing,1,29.99,0,Cancelled,2026-07-16
+10011,CUST0006,David Wilson,user6@gmail.com,Central,USB-C Hub,Electronics,2,49.99,0.1,,2025-11-14
+10113,CUST0015,Eve Smith,user15@gmail.com,West,Coffee Maker,Home & Garden,-6,79.99,0,Refunded,2026-03-21
+10128,CUST0046,Grace Jones,user46@yahoo.com,West,Smart Watch,Electronics,-3,249.99,0.2,Pending,2026-03-01
+10186,CUST0040,Carol Davis,user40@yahoo.com,N/A,Yoga Mat,Sports,4,34.99,0.15,Cancelled,2025-11-16
+10083,CUST0038,Iris Davis,user38@outlook.com,North,Winter Jacket,Clothing,1,199.99,0,Pending,2026-01-25
+10178,CUST0043,Eve Wilson,bad-email,North,Organic Coffee,Food & Beverage,8,18.99,0.15,Completed,2026-04-16
+10023,CUST0028,David Brown,user28@yahoo.com,North,Laptop Pro 15,Electronics,9,1299.99,0.2,pending,2026-05-05
+10040,CUST0003,Bob Wilson,user3@gmail.com,North,Winter Jacket,Clothing,9,199.99,0.05,Completed,2026-06-19
+10033,CUST0049,Eve Wilson,user49@yahoo.com,Central,Organic Coffee,Food & Beverage,7,18.99,0.05,Cancelled,2025-10-22
+10053,CUST0018,Jack Brown,user18@gmail.com,Central,USB-C Hub,Electronics,2,49.99,0,Cancelled,2025-12-20
+10167,CUST0049,Eve Wilson,user49@yahoo.com,Central,Laptop Pro 15,Electronics,3,1299.99,0.1,Pending,2026-10-18
+10139,CUST0009,Henry Wilson,user9@gmail.com,East,Yoga Mat,Sports,6,34.99,0.2,Completed,2026-03-16
+10029,CUST0045,Frank Smith,user45@gmail.com,East,Garden Hose,Home & Garden,8,44.99,0,,2026-05-12
+10025,CUST0012,David Brown,user12@gmail.com,North,Organic Coffee,Food & Beverage,10,,0,,2026-03-18
+10060,CUST0042,Jack Davis,user42@gmail.com,Central,USB-C Hub,Electronics,8,49.99,0.15,pending,2026-02-04
+10194,CUST0043,Eve Wilson,user43@yahoo.com,North,USB-C Hub,Electronics,7,49.99,0.2,Refunded,2026-03-07
+10041,CUST0030,Grace Brown,user30@gmail.com,North,Smart Watch,Electronics,3,249.99,0.05,COMPLETED,2025-12-24
+10175,CUST0010,Alice Jones,user10@yahoo.com,West,Running Shoes,Sports,6,119.99,0,,2026-03-08
+10169,CUST0023,Carol Brown,user23@outlook.com,East,Protein Powder,Food & Beverage,7,54.99,0.2,pending,2026-04-30
+10027,CUST0016,Iris Smith,user16@yahoo.com,West,Protein Powder,Food & Beverage,5,,0,Pending,2026-08-11
+10026,CUST0014,Frank Brown,user14@outlook.com,Central,Garden Hose,Home & Garden,8,44.99,0.2,,2026-09-14
+10129,CUST0036,Grace Wilson,user36@gmail.com,West,USB-C Hub,Electronics,10,49.99,0,Refunded,2025-11-13
+10061,CUST0033,Henry Jones,user33@gmail.com,East,Smart Watch,Electronics,3,249.99,0.2,,2025-11-15
+10021,CUST0005,Alice Smith,user5@outlook.com,South,Yoga Mat,Sports,6,34.99,0.15,pending,2026-04-24
+10046,CUST0021,David Smith,user21@gmail.com,West,Wireless Headphones,Electronics,9,89.99,0.2,Pending,2026-06-29
+10010,CUST0019,David Smith,user19@yahoo.com,North,Running Shoes,Sports,1,119.99,0.1,Completed,2026-07-16
+10195,CUST0024,David Brown,user24@gmail.com,North,Smart Watch,Electronics,9,249.99,0.1,Completed,2026-06-10
+10054,CUST0018,Jack Brown,user18@gmail.com,Central,Garden Hose,Home & Garden,9,,0.05,COMPLETED,2026-03-29
+10134,CUST0002,David Jones,user2@outlook.com,South,Coffee Maker,Home & Garden,9,79.99,0,Cancelled,2026-06-12
+10133,CUST0039,Alice Smith,user39@gmail.com,South,Winter Jacket,Clothing,10,199.99,0,Completed,2026-08-18
+10161,CUST0004,Jack Davis,user4@yahoo.com,North,Coffee Maker,Home & Garden,3,79.99,0.1,COMPLETED,2026-03-21
+10056,CUST0028,David Brown,user28@yahoo.com,North,Protein Powder,Food & Beverage,8,54.99,0,Refunded,2026-04-10
+10123,CUST0047,Alice Brown,user47@outlook.com,Central,Winter Jacket,Clothing,10,199.99,0.05,,2026-01-29
+10004,,Eve Smith,user15@gmail.com,West,Wireless Headphones,Electronics,6,89.99,0,Pending,2026-05-23
+10059,,David Jones,user2@outlook.com,South,Protein Powder,Food & Beverage,10,54.99,0.2,Pending,2026-01-16
+10078,CUST0035,Iris Brown,user35@outlook.com,Central,USB-C Hub,Electronics,7,49.99,0.05,pending,2026-03-05
+10084,CUST0033,Henry Jones,user33@gmail.com,East,Running Shoes,Sports,10,119.99,0,,13/07/2026
+10049,CUST0037,Frank Jones,user37@yahoo.com,South,Protein Powder,Food & Beverage,1,54.99,0,COMPLETED,2025-12-14
+10180,CUST0037,Frank Jones,user37@yahoo.com,South,Running Shoes,Sports,4,119.99,0,,27/06/2026
+10080,CUST0023,Carol Brown,user23@outlook.com,East,Laptop Pro 15,Electronics,7,1299.99,0,Completed,2025-12-29
+10013,CUST0005,Alice Smith,user5@outlook.com,South,Laptop Pro 15,Electronics,8,1299.99,0.1,Completed,2026-10-20
+10121,CUST0028,David Brown,user28@yahoo.com,North,T-Shirt Pack,Clothing,8,29.99,0.05,Pending,2026-02-21
+10117,CUST0024,David Brown,user24@gmail.com,,Wireless Headphones,Electronics,9,89.99,0.1,COMPLETED,2026-04-23
+10072,CUST0015,Eve Smith,user15@gmail.com,West,Organic Coffee,Food & Beverage,6,18.99,0,COMPLETED,2026-06-10
+10038,CUST0024,David Brown,user24@gmail.com,North,USB-C Hub,Electronics,-10,49.99,0.1,pending,2026-10-07
+10042,CUST0018,Jack Brown,user18@gmail.com,Central,Winter Jacket,Clothing,4,199.99,0.2,Cancelled,2026-09-26
+10082,CUST0039,Alice Smith,user39@gmail.com,South,Laptop Pro 15,Electronics,5,1299.99,0.2,Pending,2026-10-14
+10119,CUST0045,Frank Smith,user45@gmail.com,East,Coffee Maker,Home & Garden,3,79.99,0.2,pending,09/12/2025
+10199,CUST0008,Iris Davis,user8@outlook.com,South,Laptop Pro 15,Electronics,6,1299.99,0.15,,2025-11-29
+10069,CUST0017,Bob Wilson,user17@outlook.com,East,Protein Powder,Food & Beverage,1,54.99,0.2,Cancelled,2026-04-08
+10086,CUST0034,Carol Jones,user34@yahoo.com,Central,Yoga Mat,Sports,8,34.99,0.1,Completed,2026-05-29
+10146,CUST0009,Henry Wilson,user9@gmail.com,East,Garden Hose,Home & Garden,4,44.99,0.1,pending,2026-02-16
+10154,CUST0019,David Smith,user19@yahoo.com,North,Coffee Maker,Home & Garden,9,79.99,0.1,Pending,2026-04-19
+10088,CUST0006,David Wilson,bad-email,Central,Wireless Headphones,Electronics,2,89.99,0.05,pending,2025-11-25
+10018,CUST0023,Carol Brown,user23@outlook.com,East,Running Shoes,Sports,4,119.99,0.15,,2025-11-27
+10085,CUST0007,Alice Wilson,user7@yahoo.com,South,Coffee Maker,Home & Garden,8,79.99,0,Cancelled,2026-09-14
+10137,CUST0011,Frank Brown,user11@outlook.com,South,Winter Jacket,Clothing,10,199.99,0.15,,2026-02-11
+10103,CUST0004,Jack Davis,user4@yahoo.com,North,Coffee Maker,Home & Garden,2,79.99,0.2,Cancelled,13/09/2026
+10155,CUST0012,David Brown,user12@gmail.com,North,Laptop Pro 15,Electronics,6,1299.99,0.2,pending,2026-02-05
+10179,CUST0028,David Brown,user28@yahoo.com,North,USB-C Hub,Electronics,2,49.99,0,Pending,2026-04-30
+10141,CUST0033,Henry Jones,user33@gmail.com,East,Laptop Pro 15,Electronics,1,1299.99,0,Cancelled,2025-12-09
+10076,CUST0030,Grace Brown,user30@gmail.com,North,Winter Jacket,Clothing,5,199.99,0.1,pending,08/03/2026
+10189,CUST0009,Henry Wilson,user9@gmail.com,East,Yoga Mat,Sports,5,34.99,0,Completed,2026-04-18
+10016,CUST0004,Jack Davis,user4@yahoo.com,North,Wireless Headphones,Electronics,7,89.99,0.2,Completed,2026-01-29
+10111,CUST0037,Frank Jones,user37@yahoo.com,South,Coffee Maker,Home & Garden,8,79.99,0.2,Refunded,2026-01-31
+10012,CUST0038,Iris Davis,user38@outlook.com,North,Organic Coffee,Food & Beverage,9,18.99,0,Pending,2026-09-26
+10162,CUST0038,Iris Davis,user38@outlook.com,North,Wireless Headphones,Electronics,1,89.99,0.05,Completed,2026-02-23
+10034,CUST0015,Eve Smith,user15@gmail.com,West,Coffee Maker,Home & Garden,4,79.99,0,Completed,2026-03-28
+10174,CUST0031,David Wilson,user31@yahoo.com,East,Winter Jacket,Clothing,4,199.99,0,Completed,2026-02-12
+10005,CUST0033,Henry Jones,user33@gmail.com,East,Running Shoes,Sports,5,119.99,0.15,COMPLETED,2026-04-15
+10039,CUST0025,Jack Jones,user25@yahoo.com,Central,T-Shirt Pack,Clothing,4,29.99,0,,2026-05-24
+10032,CUST0045,Frank Smith,user45@gmail.com,East,USB-C Hub,Electronics,4,49.99,0,Cancelled,2026-03-21
+10110,CUST0029,David Smith,user29@outlook.com,East,Organic Coffee,Food & Beverage,5,18.99,0.2,Refunded,2026-07-21
+10095,CUST0017,Bob Wilson,user17@outlook.com,East,Yoga Mat,Sports,6,34.99,0,pending,2025-10-23
+10171,CUST0006,David Wilson,user6@gmail.com,Central,Garden Hose,Home & Garden,4,44.99,0,pending,2026-01-26
+10055,CUST0037,Frank Jones,user37@yahoo.com,South,Organic Coffee,Food & Beverage,1,18.99,0.2,Cancelled,2026-06-23
