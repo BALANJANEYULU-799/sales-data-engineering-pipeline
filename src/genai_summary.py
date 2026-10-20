@@ -17,7 +17,13 @@ import json
 import logging
 import os
 import sqlite3
+import sys
 from datetime import datetime
+
+_proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_lib_dir = os.path.join(_proj_root, "lib")
+if os.path.isdir(_lib_dir) and _lib_dir not in sys.path:
+    sys.path.insert(0, _lib_dir)
 
 import pandas as pd
 from sqlalchemy import create_engine, text

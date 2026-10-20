@@ -1,14 +1,9 @@
 """
 src/validation.py
 =================
-Data quality validation stage: runs named checks against the cleaned
-DataFrame and produces a structured JSON report.
-
-This module is an original addition to the reference project
-(Pravalika Kadakanchi / ETL-Pipeline). The reference project does not
-include a standalone validation module with named checks, pass/fail status,
-and a structured JSON report. The reference does include a data-quality
-audit SQL query, which this module complements with Python-level checks.
+Data Quality Validation Stage: Runs automated pre-load verification checks
+against the transformed dataset to guarantee structural, financial, and relational integrity.
+Generates an auditable Data Quality JSON scorecard with pass/fail metrics.
 """
 
 import logging

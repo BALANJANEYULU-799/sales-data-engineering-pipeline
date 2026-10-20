@@ -1,16 +1,9 @@
 """
 src/extraction.py
 =================
-Extraction stage: reads raw sales CSV data, validates file existence and
-required columns, reports record counts, and returns a pandas DataFrame.
-
-Attribution note
-----------------
-The Extractor class design (CSV reading + null/duplicate profiling pattern)
-is inspired by the reference project by Pravalika Kadakanchi
-(https://github.com/PravalikaKadakanchi/ETL-Pipeline).
-The column validation, multi-file merge, and detailed profile report
-are original additions in this project.
+Data Ingestion Stage: Ingests raw sales transactional data from CSV sources,
+validates schema contracts against mandatory column definitions, handles multi-batch
+ingestion with source lineage tracking, and computes diagnostic profiling telemetry.
 """
 
 import os

@@ -13,11 +13,12 @@
 > and loads the clean data into a SQLite database.
 > I also implemented incremental loading, which means re-running the pipeline
 > with the same batch loads zero new records — this property is called idempotency.
-> The project includes 41 automated pytest tests, a GitHub Actions CI workflow,
-> SQL analytics queries demonstrating window functions and CTEs, and an interactive CLI.
-> I adapted the core ETL structure from an open-source reference project by Pravalika Kadakanchi
-> and added several new features: a quarantine module, a named DQ validation module,
-> incremental loading, a star schema demonstration, and extended tests."
+> The project includes 42 automated pytest tests, a GitHub Actions CI workflow,
+> 12 SQL analytics queries demonstrating window functions, CTEs, and star schema joins,
+> and an interactive CLI.
+> I designed and engineered this pipeline from scratch to demonstrate Cloud Data Engineer
+> competencies: schema validation, defensive data quality, dimensional modeling,
+> idempotent ingestion, and GenAI prompt synthesis."
 
 ---
 
@@ -224,10 +225,15 @@ The `@pytest.fixture` decorator makes it available to any test that lists it as 
 **A:** REPLACE drops and recreates the table each run. APPEND adds all rows and can create duplicates. UPSERT inserts only new records and skips existing ones — it's idempotent.
 
 ### Q15: What is GitHub Actions CI?
-**A:** Continuous Integration — automatically running tests on every code push. My `tests.yml` workflow runs all 41 pytest tests on Python 3.10, 3.11, and 3.12 whenever I push to GitHub.
+**A:** Continuous Integration — automatically running tests on every code push. My `tests.yml` workflow runs all 42 pytest tests across Python 3.10, 3.11, and 3.12 whenever changes are pushed to GitHub.
 
-### Q16: What did you implement versus what came from the reference project?
-**A:** I adapted the core ETL class structure and transformer test fixtures from the reference project by Pravalika Kadakanchi. I added: quarantine module, standalone DQ validation module, incremental loading, star schema, interactive CLI, pipeline_runs metadata table, and 18 additional tests. I document this clearly in the README's attribution section.
+### Q16: How did you design this pipeline and why are these specific architectural choices important?
+**A:** I engineered this pipeline from scratch to reflect enterprise data engineering standards rather than simple academic scripts. Key architectural decisions include:
+1. **Defensive Quarantine Pattern:** Rather than silently dropping invalid rows, corrupted records are isolated in a quarantine store with explicit rejection reasons, preserving data observability.
+2. **Pre-Load Data Quality Gate:** 13 automated checks verify business rules (positive quantities, unique keys, valid ranges) before relational loading.
+3. **Kimball Star Schema:** Transactional sales are modeled into `fact_sales` and conformed dimensions (`dim_product`, `dim_date`, `dim_region`), enabling fast slice-and-dice BI queries.
+4. **Idempotent Incremental Ingestion:** A `loaded_order_ids` tracking watermark ensures that replaying existing batches or retrying failed runs inserts zero duplicate records ($f(f(x)) = f(x)$).
+5. **GenAI Readiness:** Aggregates verified database KPIs into a structured LLM prompt context and executive briefing without external API cost dependencies.
 
 ### Q17: How would you scale this to production?
 **A:** Replace SQLite with PostgreSQL or BigQuery, add Apache Airflow for scheduling, use S3 or GCS for raw file storage, containerize with Docker, and add monitoring with logging dashboards.

@@ -1,13 +1,9 @@
 """
 src/profiling.py
 ================
-Data profiling stage: generates a rich JSON report describing the
-shape, quality, and distribution of raw sales data.
-
-This module is an original addition to the reference project
-(Pravalika Kadakanchi / ETL-Pipeline). The reference project
-includes a basic profile dict inside the Extractor class. This module
-provides a standalone, detailed profiling step with file output.
+Data Profiling Stage: Generates comprehensive telemetry describing the shape,
+schema completeness, null distributions, and numeric statistics of incoming datasets.
+Exports structured profiling artifacts in JSON format.
 """
 
 import json

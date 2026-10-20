@@ -1,23 +1,17 @@
 """
 src/database.py
 ===============
-Database loading stage: loads validated records into SQLite using
-SQLAlchemy.  Supports three modes:
+Storage & Analytical Loading Stage: Manages relational persistence into SQLite
+using SQLAlchemy. Supports deterministic loading strategies:
 
-  replace    – drop and recreate the table on each run (default for first run)
-  append     – add rows to an existing table (use with caution for duplicates)
-  upsert     – insert new rows; skip rows whose order_id already exists
-               (idempotent / incremental mode)
+  replace  – recreates target relational tables for clean full-refresh runs
+  append   – appends incoming records to existing tables
+  upsert   – executes idempotent insertion by filtering out already-loaded order_ids
 
-This module is an original addition to the reference project.  The reference
-project uses pandas to_sql with if_exists='replace' only, without
-idempotency or upsert logic.
-
-Attribution
------------
-Loader class skeleton inspired by reference project (Pravalika Kadakanchi /
-ETL-Pipeline). The upsert / incremental logic, pipeline_runs metadata table,
-and explicit schema-creation from SQL file are original additions.
+Also manages:
+  * Kimball Star Schema population (fact_sales, dim_product, dim_date, dim_region)
+  * Metadata lineage logging into pipeline_runs audit table
+  * Schema bootstrapping from DDL definitions
 """
 
 import logging

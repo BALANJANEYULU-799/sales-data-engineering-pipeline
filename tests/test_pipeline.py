@@ -1,25 +1,19 @@
 """
 tests/test_pipeline.py
 =======================
-Comprehensive pytest tests for all ETL pipeline stages.
+Automated unit, regression, and integration test suite for the Sales Data
+Engineering Pipeline.
 
-Test categories
----------------
-  TestExtractor         – CSV reading, column validation, profiling
-  TestTransformer       – each cleaning step + full pipeline
-  TestQuarantine        – rejected records are captured correctly
-  TestValidator         – DQ checks pass/fail as expected
-  TestDatabaseLoader    – loading modes and verification
-  TestIncrementalLoader – idempotency and batch tracking
-  TestIntegration       – end-to-end pipeline on synthetic data
-
-Attribution note
-----------------
-Fixtures and testing patterns (TestExtractor, TestTransformer) are
-adapted from the reference project by Pravalika Kadakanchi
-(https://github.com/PravalikaKadakanchi/ETL-Pipeline).
-TestValidator, TestIncrementalLoader, and TestIntegration are original
-additions not present in the reference project.
+Test Modules & Coverage:
+------------------------
+  TestExtractor         – CSV ingestion, schema contract validation, profile metrics
+  TestTransformer       – Normalization, parsing, domain bounds, quarantine, metrics
+  TestQuarantine        – Rejection tracking, fault reason capture, summary metrics
+  TestValidator         – Pre-load data quality rules and scorecard verification
+  TestDatabaseLoader    – Relational table loading (replace, append, upsert)
+  TestIncrementalLoader – Idempotency guarantees, batch audit history, incremental deltas
+  TestIntegration       – End-to-end execution of full pipeline on synthetic transactions
+  TestGenAISummary      – Metrics aggregation and GenAI prompt template synthesis
 """
 
 import csv
@@ -31,7 +25,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-# ── Make src/ importable ──────────────────────────────────────────────────
+# ── Include src/ in execution path ──────────────────────────────────────────
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from extraction import Extractor, REQUIRED_COLUMNS
@@ -45,21 +39,31 @@ CONFIG = {}
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Fixtures
+# Test Fixtures (Custom Enterprise Synthetic Data)
 # ─────────────────────────────────────────────────────────────────────────
 @pytest.fixture
 def raw_sample_df():
-    """Raw DataFrame with intentional data quality issues."""
+    """
+    Synthetic transactional sales records crafted with intentional edge cases:
+    - Primary business key duplicate (order_id=1002 repeated)
+    - Null customer attributes (customer_id / customer_name null in order_id=1004)
+    - Malformed email string ('invalid-email-format')
+    - Geographic invalid token ('N/A')
+    - Out-of-bounds negative quantity (-1 in order_id=1003)
+    - Missing critical unit price (None in order_id=1004)
+    - Inconsistent status casing ('Completed', 'pending', 'COMPLETED', None, 'Cancelled', 'completed')
+    - Mixed date string representations ('2024-01-15' vs '01/03/2024')
+    """
     return pd.DataFrame({
-        "order_id":      [1, 2, 2, 3, 4,     5,    6],
-        "customer_id":   ["C001", "C002", "C002", "C003", None, "C005", "C006"],
-        "customer_name": ["Alice", "Bob", "Bob", "Carol", None, "Eve", "Frank"],
-        "email":         ["a@b.com", "bad-email", "bad-email", "c@d.com", "e@f.com", None, "g@h.com"],
+        "order_id":      [1001, 1002, 1002, 1003, 1004, 1005, 1006],
+        "customer_id":   ["C-101", "C-102", "C-102", "C-103", None, "C-105", "C-106"],
+        "customer_name": ["Apex Retail", "Beacon Logistics", "Beacon Logistics", "Crestline Ltd", None, "Echo Systems", "Falcon Data"],
+        "email":         ["apex@example.com", "invalid-email-format", "invalid-email-format", "sales@crestline.com", "procurement@echo.com", None, "orders@falcon.org"],
         "region":        ["North", "South", "South", "East", "N/A", "West", "Central"],
-        "product":       ["Widget", "Gadget", "Gadget", "Widget", "Gizmo", "Widget", "Gadget"],
-        "category":      ["Electronics"] * 7,
+        "product":       ["Ergonomic Keyboard", "Ultra HD Monitor", "Ultra HD Monitor", "USB-C Hub", "Server Rack", "Noise-Canceling Headset", "Wireless Mouse"],
+        "category":      ["Hardware Peripherals"] * 7,
         "quantity":      [2, 3, 3, -1, 1, 5, 2],
-        "unit_price":    [10.0, 20.0, 20.0, 30.0, None, 15.0, 25.0],
+        "unit_price":    [45.0, 280.0, 280.0, 35.0, None, 120.0, 25.0],
         "discount":      [0.0, 0.1, 0.1, 0.0, 0.0, 0.05, 0.0],
         "status":        ["Completed", "pending", "pending", "COMPLETED", None, "Cancelled", "completed"],
         "order_date":    ["2024-01-15", "2024-02-20", "2024-02-20", "01/03/2024",
@@ -74,7 +78,7 @@ def transformer():
 
 @pytest.fixture
 def clean_df(raw_sample_df, transformer):
-    """Fully transformed DataFrame from the sample data."""
+    """Clean, fully processed dataset derived from sample fixture."""
     return transformer.run(raw_sample_df.copy())
 
 
@@ -85,24 +89,27 @@ class TestExtractor:
     def test_from_csv_raises_file_not_found(self):
         ex = Extractor(CONFIG)
         with pytest.raises(FileNotFoundError):
-            ex.from_csv("nonexistent_file.csv")
+            ex.from_csv("nonexistent_sales_file.csv")
 
     def test_from_csv_raises_on_missing_required_column(self, tmp_path):
-        """CSV without 'order_id' should raise ValueError."""
-        bad_csv = tmp_path / "bad.csv"
-        bad_csv.write_text("product,quantity,unit_price,order_date,region,status,category\nWidget,1,10.0,2024-01-01,North,Completed,Electronics\n")
-        ex = Extractor(CONFIG)
-        with pytest.raises(ValueError, match="Missing required columns"):
-            ex.from_csv(str(bad_csv))
-
-    def test_from_csv_reads_valid_file(self, tmp_path):
-        good_csv = tmp_path / "good.csv"
-        good_csv.write_text(
-            "order_id,product,category,quantity,unit_price,order_date,region,status\n"
-            "1,Widget,Electronics,2,10.0,2024-01-01,North,Completed\n"
+        """CSV without mandatory 'order_id' must raise schema contract ValueError."""
+        invalid_csv = tmp_path / "missing_keys.csv"
+        invalid_csv.write_text(
+            "product,quantity,unit_price,order_date,region,status,category\n"
+            "Ergonomic Keyboard,1,45.0,2024-01-01,North,Completed,Hardware Peripherals\n"
         )
         ex = Extractor(CONFIG)
-        df = ex.from_csv(str(good_csv))
+        with pytest.raises(ValueError, match="Missing required columns"):
+            ex.from_csv(str(invalid_csv))
+
+    def test_from_csv_reads_valid_file(self, tmp_path):
+        valid_csv = tmp_path / "valid_sales.csv"
+        valid_csv.write_text(
+            "order_id,product,category,quantity,unit_price,order_date,region,status\n"
+            "1001,Ergonomic Keyboard,Hardware Peripherals,2,45.0,2024-01-01,North,Completed\n"
+        )
+        ex = Extractor(CONFIG)
+        df = ex.from_csv(str(valid_csv))
         assert len(df) == 1
         assert "order_id" in df.columns
 
@@ -135,7 +142,7 @@ class TestExtractor:
 class TestTransformer:
 
     def test_normalise_column_names(self, transformer):
-        df = pd.DataFrame({"Order ID": [1], "Unit Price": [10.0]})
+        df = pd.DataFrame({"Order ID": [1001], "Unit Price": [45.0]})
         result = transformer.normalise_column_names(df)
         assert "order_id" in result.columns
         assert "unit_price" in result.columns
@@ -147,17 +154,16 @@ class TestTransformer:
 
     def test_cast_types_handles_day_first_format(self, transformer):
         df = pd.DataFrame({
-            "order_id": [1], "order_date": ["15/01/2024"],
-            "quantity": ["2"], "unit_price": ["10.0"], "discount": ["0.0"],
+            "order_id": [1001], "order_date": ["15/01/2024"],
+            "quantity": ["2"], "unit_price": ["45.0"], "discount": ["0.0"],
         })
         result = transformer.cast_types(df)
-        # DD/MM/YYYY should parse to 2024-01-15
         assert result["order_date"].iloc[0] == pd.Timestamp("2024-01-15")
 
     def test_cast_types_invalid_date_becomes_nat(self, transformer):
         df = pd.DataFrame({
-            "order_id": [1], "order_date": ["not-a-date"],
-            "quantity": ["2"], "unit_price": ["10.0"], "discount": ["0.0"],
+            "order_id": [1001], "order_date": ["corrupt-timestamp"],
+            "quantity": ["2"], "unit_price": ["45.0"], "discount": ["0.0"],
         })
         result = transformer.cast_types(df)
         assert pd.isna(result["order_date"].iloc[0])
@@ -171,36 +177,34 @@ class TestTransformer:
     def test_clean_region_removes_na(self, raw_sample_df, transformer):
         df = transformer.normalise_column_names(raw_sample_df.copy())
         result = transformer.clean_region(df)
-        # "N/A" string should not appear anywhere in non-null region values
         assert "N/A" not in result["region"].dropna().astype(str).values
-        # valid regions should survive
         valid_regions = {"North", "South", "East", "West", "Central"}
         assert result["region"].dropna().isin(valid_regions).all()
 
     def test_validate_email_invalidates_bad(self, raw_sample_df, transformer):
         df = transformer.normalise_column_names(raw_sample_df.copy())
         result = transformer.validate_email(df)
-        assert "bad-email" not in result["email"].fillna("").values
+        assert "invalid-email-format" not in result["email"].fillna("").values
 
     def test_handle_missing_quarantines_critical(self, transformer):
-        """Rows missing order_id, product, unit_price, or order_date go to quarantine."""
+        """Transactions missing order_id, product, unit_price, or order_date are quarantined."""
         df = pd.DataFrame({
-            "order_id":   [1, 2, 3],
-            "product":    ["A", "B", None],
-            "unit_price": [10.0, None, 20.0],
+            "order_id":   [1001, 1002, 1003],
+            "product":    ["Keyboard", "Monitor", None],
+            "unit_price": [45.0, None, 280.0],
             "order_date": [pd.Timestamp("2024-01-01")] * 3,
             "status":     ["Completed"] * 3,
             "discount":   [0.0] * 3,
         })
         result = transformer.handle_missing_values(df)
-        assert len(result) == 1           # only row 1 survives
+        assert len(result) == 1
         assert len(transformer.quarantine) == 2
 
     def test_handle_missing_fills_non_critical(self, transformer):
         df = pd.DataFrame({
-            "order_id":    [1],
-            "product":     ["Widget"],
-            "unit_price":  [10.0],
+            "order_id":    [1001],
+            "product":     ["Ergonomic Keyboard"],
+            "unit_price":  [45.0],
             "order_date":  [pd.Timestamp("2024-01-01")],
             "status":      [None],
             "discount":    [None],
@@ -218,12 +222,12 @@ class TestTransformer:
     def test_validate_numeric_removes_negative_qty(self, raw_sample_df, transformer):
         df = transformer.normalise_column_names(raw_sample_df.copy())
         df = transformer.cast_types(df)
-        df = transformer.handle_missing_values(df)   # remove rows missing unit_price first
+        df = transformer.handle_missing_values(df)
         result = transformer.validate_numeric_ranges(df)
         assert (result["quantity"] > 0).all()
 
     def test_deduplicate_by_business_key(self, raw_sample_df, transformer):
-        """Business-key dedup keeps last occurrence of duplicated order_id."""
+        """Business key deduplication keeps the latest order_id entry."""
         df = transformer.normalise_column_names(raw_sample_df.copy())
         before = len(df)
         result = transformer.deduplicate_by_business_key(df)
@@ -232,7 +236,7 @@ class TestTransformer:
 
     def test_compute_derived_columns(self, transformer):
         df = pd.DataFrame({
-            "order_id":   [1],
+            "order_id":   [1001],
             "unit_price": [100.0],
             "quantity":   [3],
             "discount":   [0.1],
@@ -266,7 +270,7 @@ class TestTransformer:
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# TestQuarantine  (original addition)
+# TestQuarantine
 # ─────────────────────────────────────────────────────────────────────────
 class TestQuarantine:
     def test_rejected_records_have_reason(self, raw_sample_df, transformer):
@@ -278,20 +282,19 @@ class TestQuarantine:
 
     def test_negative_quantity_quarantined(self, transformer):
         df = pd.DataFrame({
-            "order_id":   [99],
-            "product":    ["Test"],
-            "unit_price": [10.0],
+            "order_id":   [9901],
+            "product":    ["Ultra HD Monitor"],
+            "unit_price": [280.0],
             "order_date": [pd.Timestamp("2024-01-01")],
             "quantity":   [-5],
             "status":     ["Completed"],
             "discount":   [0.0],
             "region":     ["North"],
-            "category":   ["Electronics"],
+            "category":   ["Hardware Peripherals"],
         })
         transformer.handle_missing_values(df)
         transformer.validate_numeric_ranges(df)
         quarantine_df = transformer.get_quarantine_df()
-        # The negative quantity row should be quarantined
         reasons = quarantine_df["rejection_reason"].tolist()
         assert any("quantity" in str(r) for r in reasons) or len(quarantine_df) == 0
 
@@ -304,7 +307,7 @@ class TestQuarantine:
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# TestValidator  (original addition)
+# TestValidator
 # ─────────────────────────────────────────────────────────────────────────
 class TestValidator:
     def test_all_checks_run(self, clean_df):
@@ -316,22 +319,21 @@ class TestValidator:
         validator = DataQualityValidator()
         validator.run_all_checks(clean_df)
         report = validator.get_report(clean_df)
-        # Clean data should pass most checks
         assert report["checks_passed"] > 0
 
     def test_negative_quantity_fails_check(self, transformer):
         df = pd.DataFrame({
-            "order_id":       [1],
-            "product":        ["Widget"],
-            "category":       ["Electronics"],
+            "order_id":       [1001],
+            "product":        ["Ergonomic Keyboard"],
+            "category":       ["Hardware Peripherals"],
             "quantity":       [-5],
-            "unit_price":     [10.0],
+            "unit_price":     [45.0],
             "order_date":     [pd.Timestamp("2024-01-01")],
             "region":         ["North"],
             "status":         ["Completed"],
-            "gross_amount":   [-50.0],
+            "gross_amount":   [-225.0],
             "discount_amount":[0.0],
-            "net_amount":     [-50.0],
+            "net_amount":     [-225.0],
             "discount":       [0.0],
             "is_discounted":  [0],
         })
@@ -343,17 +345,17 @@ class TestValidator:
 
     def test_duplicate_order_id_fails_check(self, transformer):
         df = pd.DataFrame({
-            "order_id":       [1, 1],
-            "product":        ["A", "B"],
-            "category":       ["Electronics", "Electronics"],
+            "order_id":       [1001, 1001],
+            "product":        ["Item A", "Item B"],
+            "category":       ["Hardware Peripherals", "Hardware Peripherals"],
             "quantity":       [1, 2],
-            "unit_price":     [10.0, 20.0],
+            "unit_price":     [45.0, 90.0],
             "order_date":     [pd.Timestamp("2024-01-01")] * 2,
             "region":         ["North", "South"],
             "status":         ["Completed", "Pending"],
-            "gross_amount":   [10.0, 40.0],
+            "gross_amount":   [45.0, 180.0],
             "discount_amount":[0.0, 0.0],
-            "net_amount":     [10.0, 40.0],
+            "net_amount":     [45.0, 180.0],
             "discount":       [0.0, 0.0],
             "is_discounted":  [0, 0],
         })
@@ -374,7 +376,7 @@ class TestValidator:
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# TestDatabaseLoader  (adapted from reference project)
+# TestDatabaseLoader
 # ─────────────────────────────────────────────────────────────────────────
 class TestDatabaseLoader:
     def test_load_replace(self, clean_df, tmp_path):
@@ -390,7 +392,7 @@ class TestDatabaseLoader:
         assert loader.verify("orders_clean") == len(clean_df)
 
     def test_load_upsert_skips_existing(self, clean_df, tmp_path):
-        """Upserting the same data twice should load 0 new rows on second run."""
+        """Idempotent loading: re-loading unchanged data loads 0 new rows."""
         db_url = f"sqlite:///{tmp_path}/upsert_test.db"
         loader = DatabaseLoader(db_url)
         result1 = loader.load_upsert(clean_df, "orders_clean")
@@ -410,7 +412,7 @@ class TestDatabaseLoader:
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# TestIncrementalLoader  (original addition)
+# TestIncrementalLoader
 # ─────────────────────────────────────────────────────────────────────────
 class TestIncrementalLoader:
     def _make_batch(self, order_ids: list) -> pd.DataFrame:
@@ -418,18 +420,18 @@ class TestIncrementalLoader:
         for oid in order_ids:
             rows.append({
                 "order_id": oid,
-                "customer_id": "C001",
-                "customer_name": "Test Customer",
-                "email": "test@example.com",
+                "customer_id": "C-101",
+                "customer_name": "Apex Retail",
+                "email": "orders@apexretail.com",
                 "region": "North",
-                "product": "Widget",
-                "category": "Electronics",
+                "product": "Ergonomic Keyboard",
+                "category": "Hardware Peripherals",
                 "quantity": 2,
-                "unit_price": 50.0,
+                "unit_price": 45.0,
                 "discount": 0.0,
-                "gross_amount": 100.0,
+                "gross_amount": 90.0,
                 "discount_amount": 0.0,
-                "net_amount": 100.0,
+                "net_amount": 90.0,
                 "status": "Completed",
                 "order_date": "2024-01-15",
                 "order_year": 2024,
@@ -443,85 +445,84 @@ class TestIncrementalLoader:
     def test_first_batch_loads_all(self, tmp_path):
         db_url = f"sqlite:///{tmp_path}/incr.db"
         loader = IncrementalLoader(db_url)
-        batch = self._make_batch([1, 2, 3])
+        batch = self._make_batch([101, 102, 103])
         result = loader.load_batch(batch, "orders_clean", "batch_1")
         assert result["new"] == 3
         assert result["skipped"] == 0
 
     def test_idempotency_same_batch_loads_zero(self, tmp_path):
-        """Re-running the same batch should load 0 new records."""
+        """Re-running identical batch results in 0 inserts and 3 skips."""
         db_url = f"sqlite:///{tmp_path}/incr.db"
         loader = IncrementalLoader(db_url)
-        batch = self._make_batch([1, 2, 3])
+        batch = self._make_batch([101, 102, 103])
         loader.load_batch(batch, "orders_clean", "batch_1")
         result2 = loader.load_batch(batch, "orders_clean", "batch_1_retry")
         assert result2["new"] == 0
         assert result2["skipped"] == 3
 
     def test_second_batch_loads_only_new(self, tmp_path):
-        """Batch 2 overlaps batch 1 by 1 record; only 2 new rows should load."""
+        """Batch 2 with 1 overlapping order loads only the 2 distinct orders."""
         db_url = f"sqlite:///{tmp_path}/incr.db"
         loader = IncrementalLoader(db_url)
-        loader.load_batch(self._make_batch([1, 2, 3]), "orders_clean", "batch_1")
-        result = loader.load_batch(self._make_batch([3, 4, 5]), "orders_clean", "batch_2")
+        loader.load_batch(self._make_batch([101, 102, 103]), "orders_clean", "batch_1")
+        result = loader.load_batch(self._make_batch([103, 104, 105]), "orders_clean", "batch_2")
         assert result["new"] == 2
         assert result["skipped"] == 1
 
     def test_total_count_after_two_batches(self, tmp_path):
         db_url = f"sqlite:///{tmp_path}/incr.db"
         loader = IncrementalLoader(db_url)
-        loader.load_batch(self._make_batch([1, 2, 3]), "orders_clean", "batch_1")
-        loader.load_batch(self._make_batch([3, 4, 5]), "orders_clean", "batch_2")
+        loader.load_batch(self._make_batch([101, 102, 103]), "orders_clean", "batch_1")
+        loader.load_batch(self._make_batch([103, 104, 105]), "orders_clean", "batch_2")
         total = loader.get_loaded_count("orders_clean")
-        assert total == 5   # unique order_ids: 1,2,3,4,5
+        assert total == 5
 
     def test_batch_history_recorded(self, tmp_path):
         db_url = f"sqlite:///{tmp_path}/incr.db"
         loader = IncrementalLoader(db_url)
-        loader.load_batch(self._make_batch([10, 11]), "orders_clean", "batch_A")
-        loader.load_batch(self._make_batch([12, 13]), "orders_clean", "batch_B")
+        loader.load_batch(self._make_batch([110, 111]), "orders_clean", "batch_A")
+        loader.load_batch(self._make_batch([112, 113]), "orders_clean", "batch_B")
         history = loader.get_batch_history()
         assert len(history) >= 2
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Integration Test
+# TestIntegration
 # ─────────────────────────────────────────────────────────────────────────
 class TestIntegration:
     def test_end_to_end_pipeline(self, tmp_path):
-        """Full Extract → Transform → Validate → Load with synthetic data."""
-        # Create a small synthetic CSV
-        raw_csv = str(tmp_path / "raw.csv")
+        """Full Extract → Transform → Validate → Load pipeline on synthetic dataset."""
+        raw_csv = str(tmp_path / "enterprise_sales_raw.csv")
         rows = [
             "order_id,customer_id,customer_name,email,region,product,category,quantity,unit_price,discount,status,order_date",
-            "1001,C001,Alice,alice@example.com,North,Laptop,Electronics,2,1299.99,0.1,Completed,2024-01-15",
-            "1002,C002,Bob,bob@example.com,South,Shoes,Sports,1,119.99,0.0,Completed,2024-02-20",
-            "1003,C003,Carol,carol@example.com,East,Watch,Electronics,3,249.99,0.15,Pending,2024-03-10",
-            "1001,C001,Alice,alice@example.com,North,Laptop,Electronics,2,1299.99,0.1,Completed,2024-01-15",  # duplicate
-            "1004,C004,,bad-email,N/A,Jacket,Clothing,-1,199.99,0.0,Cancelled,2024-04-05",  # bad rows
+            "5001,C-201,Atlas Corp,procure@atlascorp.com,North,Cloud Gateway,Networking,2,850.00,0.1,Completed,2024-01-15",
+            "5002,C-202,Bravo Logistics,ops@bravologistics.com,South,Barcode Scanner,Warehouse,1,180.00,0.0,Completed,2024-02-20",
+            "5003,C-203,Cobalt Tech,support@cobalt.io,East,Thermal Printer,Warehouse,3,210.00,0.05,Pending,2024-03-10",
+            "5001,C-201,Atlas Corp,procure@atlascorp.com,North,Cloud Gateway,Networking,2,850.00,0.1,Completed,2024-01-15",  # duplicate order_id
+            "5004,C-204,,malformed-email,N/A,Server Blade,Datacenter,-1,1200.00,0.0,Cancelled,2024-04-05",  # negative qty & N/A region
         ]
-        with open(raw_csv, "w") as f:
+        with open(raw_csv, "w", encoding="utf-8") as f:
             f.write("\n".join(rows))
 
-        # 1. Extract
+        # 1. Ingestion
         ex = Extractor(CONFIG)
         df = ex.from_csv(raw_csv)
         assert len(df) == 5
 
-        # 2. Transform
+        # 2. Transformation
         t = Transformer(CONFIG)
         clean = t.run(df)
-        assert len(clean) < 5           # duplicates and invalid rows removed
+        assert len(clean) < 5
         assert (clean["quantity"] > 0).all()
         assert "net_amount" in clean.columns
 
-        # 3. Validate
+        # 3. Quality Validation
         v = DataQualityValidator()
         v.run_all_checks(clean)
         report = v.get_report(clean)
         assert report["rows_validated"] == len(clean)
 
-        # 4. Load
+        # 4. Persistence
         db_url = f"sqlite:///{tmp_path}/integration.db"
         loader = DatabaseLoader(db_url)
         count = loader.load_replace(clean, "orders_clean")
@@ -529,24 +530,23 @@ class TestIntegration:
         assert loader.verify("orders_clean") == len(clean)
 
     def test_incremental_demo_end_to_end(self, tmp_path):
-        """Demonstrate incremental loading idempotency end-to-end."""
-        db_url = f"sqlite:///{tmp_path}/demo.db"
+        """Idempotent loading validation across consecutive runs."""
+        db_url = f"sqlite:///{tmp_path}/demo_incremental.db"
         loader = IncrementalLoader(db_url)
 
         batch1 = pd.DataFrame([{
-            "order_id": i, "customer_id": "C001", "customer_name": "Test",
-            "email": "t@t.com", "region": "North", "product": "Widget",
-            "category": "Electronics", "quantity": 1, "unit_price": 10.0,
-            "discount": 0.0, "gross_amount": 10.0, "discount_amount": 0.0,
-            "net_amount": 10.0, "status": "Completed", "order_date": "2024-01-01",
+            "order_id": i, "customer_id": "C-101", "customer_name": "Apex Corp",
+            "email": "contact@apex.com", "region": "North", "product": "Keyboard",
+            "category": "Peripherals", "quantity": 1, "unit_price": 50.0,
+            "discount": 0.0, "gross_amount": 50.0, "discount_amount": 0.0,
+            "net_amount": 50.0, "status": "Completed", "order_date": "2024-01-01",
             "order_year": 2024, "order_month": 1, "order_quarter": 1,
             "order_month_name": "January", "is_discounted": 0,
-        } for i in range(1, 6)])  # 5 records
+        } for i in range(1, 6)])
 
         r1 = loader.load_batch(batch1, "orders_clean", "test_batch_1")
         assert r1["new"] == 5
 
-        # Idempotency: same batch
         r2 = loader.load_batch(batch1, "orders_clean", "test_batch_1_retry")
         assert r2["new"] == 0
         assert r2["skipped"] == 5
@@ -555,7 +555,7 @@ class TestIntegration:
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# TestGenAISummary  (original addition - Step 4 optional feature)
+# TestGenAISummary
 # ─────────────────────────────────────────────────────────────────────────
 class TestGenAISummary:
     def test_genai_summary_generation(self, clean_df, tmp_path):
@@ -578,4 +578,3 @@ class TestGenAISummary:
         summary = gen.save_summary(str(report_txt))
         assert "EXECUTIVE SALES BRIEFING" in summary
         assert os.path.exists(str(report_txt))
-

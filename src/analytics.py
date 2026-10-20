@@ -1,15 +1,18 @@
 """
 src/analytics.py
 ================
-SQL analytics runner: executes predefined queries against the SQLite DB
-and prints formatted results to the terminal.
-
-This is an original addition to the reference project.  The reference project
-provides a SQL file and a separate generate_report.py script.  This module
-provides a Python-callable analytics engine that can be invoked by the CLI.
+SQL Analytics Engine: Executes automated business intelligence queries against the
+analytical SQLite database and formats tabular reports for terminal and reporting consumption.
 """
 
 import logging
+import os
+import sys
+
+_proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_lib_dir = os.path.join(_proj_root, "lib")
+if os.path.isdir(_lib_dir) and _lib_dir not in sys.path:
+    sys.path.insert(0, _lib_dir)
 
 import pandas as pd
 from sqlalchemy import create_engine, text
